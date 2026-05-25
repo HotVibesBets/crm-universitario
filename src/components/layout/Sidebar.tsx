@@ -59,7 +59,7 @@ export function Sidebar() {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 text-slate-300 w-64 border-r border-slate-800">
+    <div className="hidden md:flex flex-col h-full bg-slate-900 text-slate-300 w-64 border-r border-slate-800 shrink-0">
       <div className="p-6 flex items-center gap-3">
         <div className="bg-orange-500 p-2 rounded-lg">
           <Building2 className="w-6 h-6 text-white" />

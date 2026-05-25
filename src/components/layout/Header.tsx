@@ -18,9 +18,9 @@ export function Header() {
   };
 
   return (
-    <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 z-10 shadow-sm">
+    <header className="h-16 md:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8 z-10 shadow-sm shrink-0">
       <div className="flex items-center gap-6">
-        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{getTitle()}</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight truncate max-w-[200px] md:max-w-none">{getTitle()}</h2>
         
         <div className="hidden md:flex items-center relative">
           <Search className="w-4 h-4 absolute left-3 text-slate-400" />

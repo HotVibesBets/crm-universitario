@@ -11,7 +11,7 @@ export default async function DashboardPage() {
           Bienvenido al Portal Operativo, <strong className="text-slate-800">{session?.user?.name}</strong>.
         </p>
         
-        <div className="grid grid-cols-2 gap-4 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
           <div className="p-5 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200 shadow-sm">
             <p className="text-sm text-slate-500 font-medium mb-1">Rol Actual</p>
             <p className="text-2xl font-bold text-slate-800">{session?.user?.role}</p>
