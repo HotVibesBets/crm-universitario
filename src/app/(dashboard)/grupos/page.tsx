@@ -7,7 +7,7 @@ import { GrupoCard } from "@/components/grupos/GrupoCard";
 export default async function GruposPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) return null;
@@ -21,6 +21,7 @@ export default async function GruposPage({
 
   const resolvedParams = await searchParams;
   const searchQuery = resolvedParams.q?.toLowerCase() || "";
+  const filterStatus = resolvedParams.status || "Todos";
 
   // Filtrar por campus si es "Campus" o "Asesor"
   let inscritosFiltrados = (role === "Campus" || role === "Asesor") 
@@ -65,6 +66,21 @@ export default async function GruposPage({
 
   const grupos = Array.from(gruposMap.values());
 
+  let gruposModificados = grupos.map(grupo => {
+    const cantidad = grupo.inscritos.length;
+    let statusText = "EN RIESGO";
+    if (cantidad >= 8) {
+      statusText = "APERTURADO";
+    } else if (cantidad >= 4) {
+      statusText = "PROBABLE";
+    }
+    return { ...grupo, statusCalculado: statusText };
+  });
+
+  if (filterStatus !== "Todos") {
+    gruposModificados = gruposModificados.filter(g => g.statusCalculado === filterStatus.toUpperCase());
+  }
+
   return (
     <div className="space-y-6">
       <div className="mb-6">
@@ -75,21 +91,38 @@ export default async function GruposPage({
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <form className="flex w-full md:w-auto relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            name="q"
-            defaultValue={searchQuery}
-            placeholder="Buscar en grupos..."
-            className="w-full sm:w-80 pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm text-slate-900"
-          />
+        <form className="flex flex-col sm:flex-row w-full gap-3">
+          <div className="relative flex-1 sm:max-w-xs">
+            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              name="q"
+              defaultValue={searchQuery}
+              placeholder="Buscar en grupos..."
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm text-slate-900"
+            />
+          </div>
+          
+          <select 
+            name="status" 
+            defaultValue={filterStatus}
+            className="w-full sm:w-auto px-4 py-2 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm text-slate-900"
+          >
+            <option value="Todos">Todos los Estatus</option>
+            <option value="APERTURADO">Aperturado</option>
+            <option value="PROBABLE">Probable</option>
+            <option value="EN RIESGO">En Riesgo</option>
+          </select>
+
+          <button type="submit" className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition-colors shadow-sm whitespace-nowrap">
+            Filtrar
+          </button>
         </form>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {grupos.length > 0 ? (
-          grupos.map((grupo, idx) => (
+        {gruposModificados.length > 0 ? (
+          gruposModificados.map((grupo, idx) => (
             <GrupoCard key={idx} grupo={grupo} />
           ))
         ) : (
