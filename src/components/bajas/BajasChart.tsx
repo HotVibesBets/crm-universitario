@@ -33,13 +33,13 @@ export function BajasChart({ data }: { data: any[] }) {
             outerRadius={90}
             paddingAngle={2}
             dataKey="value"
-            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+            label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
           >
             {activeData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip formatter={(value: number) => [`${value} leads`, "Cantidad"]} />
+          <Tooltip formatter={(value: any) => [`${value} leads`, "Cantidad"]} />
           <Legend />
         </PieChart>
       </ResponsiveContainer>
