@@ -3,11 +3,14 @@ import { authOptions } from "@/lib/auth";
 import { googleSheets } from "@/lib/google-sheets";
 import { Users, Search, Frown } from "lucide-react";
 import Link from "next/link";
+import { AccionRecuperacionForm } from "@/components/bajas/AccionRecuperacionForm";
+import { parseSeguimientoDate } from "@/lib/date-utils";
+import { BajasChart } from "@/components/bajas/BajasChart";
 
 export default async function BajasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; mes?: string; campusFilter?: string }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session) return null;
@@ -21,12 +24,36 @@ export default async function BajasPage({
   let bajas = allLeads.filter(l => l.statusLead === 'Baja de Calidad' || l.statusLead === 'Baja' || l.statusLead === 'Descartado');
 
   // Filtrar por campus
-  if (role === "Campus" || role === "Asesor") {
+  if (role === "Campus" || role === "Asesor" || role === "Dirección") {
     bajas = bajas.filter(l => l.campusInteres === campus);
   }
 
   const resolvedParams = await searchParams;
+  const campusQuery = resolvedParams.campusFilter || "Todos";
+
+  // Si es Admin/Marketing y seleccionaron un campus en el filtro
+  if ((role === "Admin" || role === "Marketing") && campusQuery !== "Todos") {
+    bajas = bajas.filter(l => l.campusInteres === campusQuery);
+  }
+
+  // Extraer campus únicos para el select
+  const uniqueCampuses = Array.from(new Set(allLeads.map(l => l.campusInteres).filter(Boolean))).sort();
+
   const searchQuery = resolvedParams.q?.toLowerCase() || "";
+  const mesQuery = resolvedParams.mes || ""; // Format: YYYY-MM
+
+  if (mesQuery) {
+    const [yearStr, monthStr] = mesQuery.split('-');
+    const filterYear = parseInt(yearStr);
+    const filterMonth = parseInt(monthStr) - 1; // 0-indexed
+
+    bajas = bajas.filter(l => {
+      if (!l.ultimaActualizacion) return false;
+      const date = parseSeguimientoDate(l.ultimaActualizacion);
+      if (!date) return false;
+      return date.getFullYear() === filterYear && date.getMonth() === filterMonth;
+    });
+  }
 
   if (searchQuery) {
     bajas = bajas.filter(l => {
@@ -48,17 +75,50 @@ export default async function BajasPage({
           </p>
         </div>
 
-        <form className="flex w-full md:w-auto relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            name="q"
-            defaultValue={searchQuery}
-            placeholder="Buscar baja..."
-            className="w-full sm:w-80 pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none shadow-sm text-slate-900"
+        <form className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+          <div className="relative flex-1 sm:max-w-xs">
+            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              name="q"
+              defaultValue={searchQuery}
+              placeholder="Buscar baja..."
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none shadow-sm text-slate-900"
+            />
+          </div>
+          
+          <input 
+            type="month" 
+            name="mes" 
+            defaultValue={mesQuery}
+            className="w-full sm:w-auto px-4 py-2 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none shadow-sm text-slate-900"
           />
+
+          {(role === "Admin" || role === "Marketing") && (
+            <select
+              name="campusFilter"
+              defaultValue={campusQuery}
+              className="w-full sm:w-auto px-4 py-2 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none shadow-sm text-slate-900"
+            >
+              <option value="Todos">Todos los Campus</option>
+              {uniqueCampuses.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
+
+          <button type="submit" className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition-colors shadow-sm whitespace-nowrap">
+            Filtrar
+          </button>
         </form>
       </div>
+
+      {bajas.length > 0 && (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h2 className="text-lg font-bold text-slate-800 mb-4 text-center">Tasa de Recuperación</h2>
+          <BajasChart data={bajas} />
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         {bajas.length > 0 ? (
@@ -70,7 +130,7 @@ export default async function BajasPage({
                   <th className="px-6 py-4">Campus</th>
                   <th className="px-6 py-4">Status / Fase</th>
                   <th className="px-6 py-4">Motivo Guardado</th>
-                  <th className="px-6 py-4">Fecha</th>
+                  <th className="px-6 py-4 w-72">Acción de Recuperación</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -91,12 +151,15 @@ export default async function BajasPage({
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-slate-600 italic">
+                      <span className="text-slate-600 italic block mb-2">
                         {lead.statusColegiatura || lead.comentario || "Sin motivo"}
                       </span>
+                      <span className="text-[10px] uppercase font-bold text-slate-400">
+                        Baja el: {lead.ultimaActualizacion || "N/A"}
+                      </span>
                     </td>
-                    <td className="px-6 py-4">
-                      {lead.ultimaActualizacion || "N/A"}
+                    <td className="px-6 py-4 align-top">
+                      <AccionRecuperacionForm lead={lead} isDireccion={["Dirección", "Admin", "Marketing"].includes(role)} />
                     </td>
                   </tr>
                 ))}

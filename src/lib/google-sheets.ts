@@ -215,7 +215,10 @@ export class GoogleSheetsService {
       llamadaCalidad: safeGet(row, 'Llamada de Calidad'),
       inscritoPor: safeGet(row, 'Inscrito Por'),
       asesorNombre: asesorMap[safeGet(row, 'Asesor')?.trim()?.toLowerCase()] || safeGet(row, 'Asesor'),
-      inscritoPorNombre: asesorMap[safeGet(row, 'Inscrito Por')?.trim()?.toLowerCase()] || safeGet(row, 'Inscrito Por')
+      inscritoPorNombre: asesorMap[safeGet(row, 'Inscrito Por')?.trim()?.toLowerCase()] || safeGet(row, 'Inscrito Por'),
+      accionRecuperacion: safeGet(row, 'Acción de Recuperación'),
+      fechaAccionRecuperacion: safeGet(row, 'Fecha de Acción de Recuperación'),
+      accionVencidaSinSeguimiento: safeGet(row, 'Acción Vencida sin Seguimiento')
     }));
   }
 
@@ -762,6 +765,27 @@ export class GoogleSheetsService {
     }
     
     return newRowsToInsert.length;
+  }
+
+  // Guardar Acción de Recuperación (Para Bajas)
+  async updateAccionRecuperacion(idLead: string, data: { accion?: string; fecha?: string; vencida?: string }) {
+    await this.init();
+    const sheet = this.doc.sheetsByTitle['Leads'];
+    await sheet.loadHeaderRow(); // Forzar recarga de encabezados por si se acaban de agregar
+    
+    const rows = await this.getCachedRows('Leads');
+    const row = rows.find(r => r.get('ID Lead') === idLead);
+    
+    if (row) {
+      if (data.accion !== undefined) row.set('Acción de Recuperación', data.accion);
+      if (data.fecha !== undefined) row.set('Fecha de Acción de Recuperación', data.fecha);
+      if (data.vencida !== undefined) row.set('Acción Vencida sin Seguimiento', data.vencida);
+      
+      await row.save();
+      this.invalidateCache('Leads');
+      return true;
+    }
+    return false;
   }
 }
 
